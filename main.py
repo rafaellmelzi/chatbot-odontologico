@@ -13,3 +13,5 @@ def health():
 @app.post("/webhook/whatsapp")
 def whatsapp_webhook(request: dict):
     return {"received": True}
+
+# Deploy fix - 2025-11-03 16:26:10
