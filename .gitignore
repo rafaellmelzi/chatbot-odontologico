@@ -1,14 +1,36 @@
-﻿.env
-*.key
-*.pem
-render.yaml
-app/routers/debug.py
-app/core/config.py
-__pycache__
-*.pyc
-.venv
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
 venv/
-.DS_Store
-*.log
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ambiente
+.env
 .env.local
-.env.*.local
+
+# Logs
+*.log
+deploy_log_*.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (se usar frontend)
+node_modules/
+dist/
+build/
+
+# Banco de dados
+*.db
+*.sqlite
