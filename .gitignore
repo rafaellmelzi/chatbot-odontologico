@@ -1,0 +1,14 @@
+﻿.env
+*.key
+*.pem
+render.yaml
+app/routers/debug.py
+app/core/config.py
+__pycache__
+*.pyc
+.venv
+venv/
+.DS_Store
+*.log
+.env.local
+.env.*.local
