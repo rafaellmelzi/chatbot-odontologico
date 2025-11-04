@@ -1,10 +1,10 @@
 ﻿import os
+import sys
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from twilio.rest import Client
 from dotenv import load_dotenv
-import traceback
 
 load_dotenv()
 
@@ -22,17 +22,16 @@ TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')
 
-print(f'TWILIO_WHATSAPP_NUMBER: {TWILIO_WHATSAPP_NUMBER}')
-
 try:
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    print('Twilio client initialized', file=sys.stderr)
 except Exception as e:
-    print(f'Erro ao conectar Twilio: {e}')
+    print(f'Twilio error: {e}', file=sys.stderr)
     client = None
 
 @app.get('/')
 async def root():
-    return {'status': 'online', 'message': 'Chatbot Odontologico API'}
+    return {'status': 'online'}
 
 @app.get('/health')
 async def health():
@@ -40,31 +39,28 @@ async def health():
 
 @app.post('/webhook/whatsapp')
 async def whatsapp_webhook(request: Request):
+    print('WEBHOOK CALLED', file=sys.stderr)
     try:
         form_data = await request.form()
-        incoming_msg = form_data.get('Body', '').lower().strip()
+        print(f'Form data keys: {list(form_data.keys())}', file=sys.stderr)
+        
+        incoming_msg = form_data.get('Body', '')
         sender = form_data.get('From', '')
         
-        print(f'DEBUG: Mensagem: "{incoming_msg}" | De: {sender}')
+        print(f'Message: "{incoming_msg}" from {sender}', file=sys.stderr)
         
-        if not sender or not incoming_msg:
-            print('DEBUG: Campos vazio')
-            return PlainTextResponse('OK')
+        response_text = 'Ola! Bem-vindo!'
         
-        response_text = 'Ola! Bem-vindo ao Chatbot Odontologico!'
-        
-        if client:
-            msg = client.messages.create(
-                from_=TWILIO_WHATSAPP_NUMBER,
-                body=response_text,
-                to=sender
-            )
-            print(f'DEBUG: Mensagem enviada: {msg.sid}')
-        else:
-            print('DEBUG: Cliente Twilio nao disponivel')
-        
+        msg = client.messages.create(
+            from_=TWILIO_WHATSAPP_NUMBER,
+            body=response_text,
+            to=sender
+        )
+        print(f'Sent: {msg.sid}', file=sys.stderr)
         return PlainTextResponse('OK')
+        
     except Exception as e:
-        print(f'ERROR: {str(e)}')
-        traceback.print_exc()
+        print(f'EXCEPTION: {str(e)}', file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         return PlainTextResponse('OK')
