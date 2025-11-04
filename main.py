@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from urllib.parse import parse_qs
+import urllib.parse
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
@@ -12,7 +13,6 @@ app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, 
 ULTRAMSG_INSTANCE = os.getenv('ULTRAMSG_INSTANCE', '')
 ULTRAMSG_TOKEN = os.getenv('ULTRAMSG_TOKEN', '')
 
-# Base de conhecimento odontológica
 RESPOSTAS = {
     'implante': 'Nossos implantes dentários são feitos com os melhores materiais. Agende uma consulta! 📞',
     'clareamento': 'Temos clareamento dental profissional com resultado em poucas sessões! ✨',
@@ -23,57 +23,35 @@ RESPOSTAS = {
     'preço': 'Temos planos flexíveis e financiamento. Fale com nosso atendente!',
     'agendar': 'Para agendar, responda com: DATA e HORÁRIO desejado',
     'emergência': 'Realizamos atendimentos de emergência 24h! Ligue 📞',
-    'branqueamento': 'Temos clareamento dental profissional com resultado em poucas sessões! ✨',
 }
 
 def detectar_intencao(mensagem):
-    """Detecta a intenção da mensagem do usuário"""
     msg = mensagem.lower().strip()
     
-    # Intenção: Saudação
-    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem', 'oi!']):
+    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem']):
         return 'saudacao'
-    
-    # Intenção: Implante
-    if any(word in msg for word in ['implante', 'implantes', 'implanta']):
+    if any(word in msg for word in ['implante', 'implantes']):
         return 'implante'
-    
-    # Intenção: Clareamento/Branqueamento
-    if any(word in msg for word in ['clareamento', 'branqueamento', 'branco', 'claro']):
+    if any(word in msg for word in ['clareamento', 'branqueamento', 'branco']):
         return 'clareamento'
-    
-    # Intenção: Canal
-    if any(word in msg for word in ['canal', 'endodontia', 'dor de dente']):
+    if any(word in msg for word in ['canal', 'endodontia']):
         return 'canal'
-    
-    # Intenção: Limpeza
-    if any(word in msg for word in ['limpeza', 'profilaxia', 'higiene']):
+    if any(word in msg for word in ['limpeza', 'profilaxia']):
         return 'limpeza'
-    
-    # Intenção: Gengivite
-    if any(word in msg for word in ['gengivite', 'gengiva', 'sangra']):
+    if any(word in msg for word in ['gengivite', 'gengiva']):
         return 'gengivite'
-    
-    # Intenção: Horário
-    if any(word in msg for word in ['horário', 'horario', 'funciona', 'abre', 'fecha']):
+    if any(word in msg for word in ['horário', 'horario', 'funciona']):
         return 'horário'
-    
-    # Intenção: Preço
-    if any(word in msg for word in ['preço', 'preco', 'valor', 'custa', 'costo']):
+    if any(word in msg for word in ['preço', 'preco', 'valor']):
         return 'preço'
-    
-    # Intenção: Agendar
-    if any(word in msg for word in ['agendar', 'marcar', 'consulta', 'agendamento']):
+    if any(word in msg for word in ['agendar', 'marcar', 'consulta']):
         return 'agendar'
-    
-    # Intenção: Emergência
-    if any(word in msg for word in ['emergência', 'emergencia', 'urgência', 'urgencia', 'dor']):
+    if any(word in msg for word in ['emergência', 'emergencia', 'urgência', 'dor']):
         return 'emergência'
     
     return 'padrao'
 
 def gerar_resposta(intencao):
-    """Gera resposta baseada na intenção detectada"""
     respostas_intencao = {
         'saudacao': '👋 Bem-vindo! Sou o Chatbot da Clínica Odontológica. Como posso ajudar? 😊',
         'implante': RESPOSTAS['implante'],
@@ -90,7 +68,6 @@ def gerar_resposta(intencao):
     return respostas_intencao.get(intencao, respostas_intencao['padrao'])
 
 def enviar_resposta(sender, resposta):
-    """Envia resposta para o Ultramsg"""
     try:
         if not sender.startswith('whatsapp:'):
             sender_formatted = f'whatsapp:{sender}'
@@ -98,18 +75,20 @@ def enviar_resposta(sender, resposta):
             sender_formatted = sender
         
         conn = http.client.HTTPSConnection("api.ultramsg.com", context=ssl._create_unverified_context())
-        payload = f"token={ULTRAMSG_TOKEN}&to={sender_formatted}&body={resposta}"
-        payload = payload.encode('utf8').decode('iso-8859-1')
+        
+        # URL encode a resposta com caracteres especiais
+        resposta_encoded = urllib.parse.quote(resposta)
+        payload = f"token={ULTRAMSG_TOKEN}&to={sender_formatted}&body={resposta_encoded}"
         
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         conn.request("POST", f"/{ULTRAMSG_INSTANCE}/messages/chat", payload, headers)
         res = conn.getresponse()
         result = res.read()
         
-        print(f'Response: {result.decode("utf-8")}', flush=True)
+        print(f'✅ Resposta enviada: {result.decode("utf-8")}', flush=True)
         return True
     except Exception as e:
-        print(f'Erro ao enviar: {str(e)}', flush=True)
+        print(f'❌ Erro ao enviar: {str(e)}', flush=True)
         return False
 
 @app.get('/')
@@ -120,16 +99,28 @@ async def root():
 async def whatsapp_webhook(request: Request):
     try:
         body = await request.body()
-        data = parse_qs(body.decode('utf-8'))
         
-        sender = data.get('phone', [''])[0].strip()
+        # Trata encoding com fallback
+        try:
+            text = body.decode('utf-8')
+        except:
+            text = body.decode('iso-8859-1')
+        
+        data = parse_qs(text)
+        
+        # Extrai dados com fallback
+        sender = data.get('phone', data.get('to', ['']))[0].strip()
         mensagem = data.get('body', [''])[0].strip()
         
-        print(f'📱 Mensagem recebida: "{mensagem}" de {sender}', flush=True)
+        print(f'📱 Webhook chamado! Mensagem: "{mensagem}" | Phone: {sender}', flush=True)
+        
+        if not sender:
+            print('⚠️ Sem número de telefone', flush=True)
+            return PlainTextResponse('OK')
         
         # Detecta intenção
         intencao = detectar_intencao(mensagem)
-        print(f'🔍 Intenção detectada: {intencao}', flush=True)
+        print(f'🔍 Intenção: {intencao}', flush=True)
         
         # Gera resposta
         resposta = gerar_resposta(intencao)
@@ -141,7 +132,7 @@ async def whatsapp_webhook(request: Request):
         
         return PlainTextResponse('OK')
     except Exception as e:
-        print(f'❌ Erro: {str(e)}', flush=True)
+        print(f'❌ Erro geral: {str(e)}', flush=True)
         import traceback
         traceback.print_exc()
         return PlainTextResponse('OK')
