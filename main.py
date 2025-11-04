@@ -1,8 +1,9 @@
 ﻿import os
+import http.client
+import ssl
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-import requests
 from urllib.parse import parse_qs
 
 app = FastAPI()
@@ -25,20 +26,23 @@ async def whatsapp_webhook(request: Request):
         body = await request.body()
         data = parse_qs(body.decode('utf-8'))
         sender = data.get('From', [''])[0].replace('whatsapp:', '')
-        incoming = data.get('Body', [''])[0].lower()
+        incoming = data.get('Body', [''])[0]
         
-        print(f'Message: {incoming} from {sender}', flush=True)
+        print(f'Received: {incoming} from {sender}', flush=True)
         
         if ULTRAMSG_INSTANCE and ULTRAMSG_TOKEN:
-            url = f'https://api.ultramsg.com/{ULTRAMSG_INSTANCE}/messages/chat'
+            conn = http.client.HTTPSConnection("api.ultramsg.com", context=ssl._create_unverified_context())
             
-            response = requests.post(url, json={
-                'token': ULTRAMSG_TOKEN,
-                'to': sender,
-                'body': 'Ola! Bem-vindo ao Chatbot Odontologico!'
-            })
+            payload = f"token={ULTRAMSG_TOKEN}&to={sender}&body=Ola! Bem-vindo ao Chatbot Odontologico!"
+            payload = payload.encode('utf8').decode('iso-8859-1')
             
-            print(f'Response: {response.status_code}', flush=True)
+            headers = {'content-type': 'application/x-www-form-urlencoded'}
+            
+            conn.request("POST", f"/{ULTRAMSG_INSTANCE}/messages/chat", payload, headers)
+            res = conn.getresponse()
+            data = res.read()
+            
+            print(f'Response: {data.decode("utf-8")}', flush=True)
         
         return PlainTextResponse('OK')
     except Exception as e:
