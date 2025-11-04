@@ -1,0 +1,15 @@
+﻿services:
+  - type: web
+    name: chatbot-odontologico
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TWILIO_ACCOUNT_SID
+        value: AC2a95cdc76fafdffc0a33156e74fa53c1
+      - key: TWILIO_AUTH_TOKEN
+        value: 89ce1b3eee1d28aee14cefe42354c57b
+      - key: TWILIO_WHATSAPP_FROM
+        value: whatsapp:+14155238886
