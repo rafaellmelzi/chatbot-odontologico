@@ -1,4 +1,5 @@
-﻿import os
+﻿import time
+import os
 import http.client
 import ssl
 from fastapi import FastAPI, Request
@@ -13,6 +14,12 @@ app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, 
 ULTRAMSG_INSTANCE = os.getenv('ULTRAMSG_INSTANCE', '')
 ULTRAMSG_TOKEN = os.getenv('ULTRAMSG_TOKEN', '')
 
+# ✅ ADICIONE AQUI OS NÚMEROS QUE PODEM USAR O BOT
+NUMEROS_PERMITIDOS = [
+    '5516991190909',  # Seu número de teste
+    # '5585987654321',  # Adicione mais números conforme necessário
+]
+
 RESPOSTAS = {
     'implante': 'Nossos implantes dentários são feitos com os melhores materiais. Agende uma consulta! 📞',
     'clareamento': 'Temos clareamento dental profissional com resultado em poucas sessões! ✨',
@@ -25,14 +32,19 @@ RESPOSTAS = {
     'emergência': 'Realizamos atendimentos de emergência 24h! Ligue 📞',
 }
 
+def numero_permitido(numero):
+    """Verifica se o número está na whitelist"""
+    numero_limpo = numero.replace('@c.us', '').replace('@g.us', '').replace('+', '')
+    return numero_limpo in NUMEROS_PERMITIDOS
+
 def detectar_intencao(mensagem):
     msg = mensagem.lower().strip()
     
-    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem', 'opa', 'ta bom', 'oi!']):
+    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem', 'opa', 'ta bom']):
         return 'saudacao'
     if any(word in msg for word in ['implante', 'implantes']):
         return 'implante'
-    if any(word in msg for word in ['clareamento', 'branqueamento', 'branco']):
+    if any(word in msg for word in ['clareamento', 'branqueamento']):
         return 'clareamento'
     if any(word in msg for word in ['canal', 'endodontia']):
         return 'canal'
@@ -40,13 +52,13 @@ def detectar_intencao(mensagem):
         return 'limpeza'
     if any(word in msg for word in ['gengivite', 'gengiva']):
         return 'gengivite'
-    if any(word in msg for word in ['horário', 'horario', 'funciona']):
+    if any(word in msg for word in ['horário', 'horario']):
         return 'horário'
-    if any(word in msg for word in ['preço', 'preco', 'valor']):
+    if any(word in msg for word in ['preço', 'preco']):
         return 'preço'
-    if any(word in msg for word in ['agendar', 'marcar', 'consulta']):
+    if any(word in msg for word in ['agendar', 'marcar']):
         return 'agendar'
-    if any(word in msg for word in ['emergência', 'emergencia', 'urgência', 'dor']):
+    if any(word in msg for word in ['emergência', 'urgência', 'dor']):
         return 'emergência'
     
     return 'padrao'
@@ -82,7 +94,10 @@ def enviar_resposta(sender_number, resposta):
         res = conn.getresponse()
         result = res.read()
         
-        print(f'✅ Resposta enviada: {result.decode("utf-8")}', flush=True)
+        status = result.decode("utf-8")
+        print(f'✅ Resposta enviada: {status}', flush=True)
+        
+        time.sleep(1)
         return True
     except Exception as e:
         print(f'❌ Erro ao enviar: {str(e)}', flush=True)
@@ -114,9 +129,15 @@ async def whatsapp_webhook(request: Request):
                 
                 print(f'📱 Mensagem: "{mensagem}" ({tipo}) de {sender}', flush=True)
                 
-                # Ignora mensagens vazias (áudio, imagem sem texto, etc)
+                # ✅ VERIFICA SE NÚMERO ESTÁ PERMITIDO
+                if not numero_permitido(sender):
+                    print(f'🚫 Número NÃO permitido: {sender}', flush=True)
+                    return PlainTextResponse('OK')
+                
+                print(f'✅ Número permitido: {sender}', flush=True)
+                
                 if not mensagem:
-                    print(f'⏭️ Mensagem vazia ({tipo}), ignorada', flush=True)
+                    print(f'⏭️ Mensagem vazia ({tipo})', flush=True)
                     return PlainTextResponse('OK')
                 
                 if sender:
@@ -128,13 +149,6 @@ async def whatsapp_webhook(request: Request):
                     
                     if ULTRAMSG_INSTANCE and ULTRAMSG_TOKEN:
                         enviar_resposta(sender, resposta)
-        else:
-            # Form-data (teste manual)
-            from urllib.parse import parse_qs
-            form_data = parse_qs(text)
-            sender = form_data.get('phone', [''])[0]
-            mensagem = form_data.get('body', [''])[0]
-            print(f'📱 Teste: "{mensagem}" de {sender}', flush=True)
         
         return PlainTextResponse('OK')
     except Exception as e:
