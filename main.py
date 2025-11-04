@@ -48,4 +48,3 @@ async def whatsapp_webhook(request: Request):
         return PlainTextResponse('OK')
     except Exception as e:
         return PlainTextResponse('ERROR', status_code=400)
-EOF
