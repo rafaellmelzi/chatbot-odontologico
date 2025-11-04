@@ -28,7 +28,7 @@ RESPOSTAS = {
 def detectar_intencao(mensagem):
     msg = mensagem.lower().strip()
     
-    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem', 'opa', 'ta bom']):
+    if any(word in msg for word in ['oi', 'ola', 'olá', 'e aí', 'tudo bem', 'opa', 'ta bom', 'oi!']):
         return 'saudacao'
     if any(word in msg for word in ['implante', 'implantes']):
         return 'implante'
@@ -69,7 +69,6 @@ def gerar_resposta(intencao):
 
 def enviar_resposta(sender_number, resposta):
     try:
-        # Remove @c.us e adiciona whatsapp:
         numero = sender_number.replace('@c.us', '').replace('@g.us', '')
         sender_formatted = f'whatsapp:{numero}'
         
@@ -103,20 +102,24 @@ async def whatsapp_webhook(request: Request):
         except:
             text = body.decode('iso-8859-1')
         
-        # Verifica se é JSON (Ultramsg) ou form-data
         if text.startswith('{'):
-            # É JSON
             data = json.loads(text)
             evento = data.get('event_type')
             
             if evento == 'message_received':
                 msg_data = data.get('data', {})
                 sender = msg_data.get('from', '')
-                mensagem = msg_data.get('body', '')
+                mensagem = msg_data.get('body', '').strip()
+                tipo = msg_data.get('type', '')
                 
-                print(f'📱 Mensagem: "{mensagem}" de {sender}', flush=True)
+                print(f'📱 Mensagem: "{mensagem}" ({tipo}) de {sender}', flush=True)
                 
-                if sender and mensagem:
+                # Ignora mensagens vazias (áudio, imagem sem texto, etc)
+                if not mensagem:
+                    print(f'⏭️ Mensagem vazia ({tipo}), ignorada', flush=True)
+                    return PlainTextResponse('OK')
+                
+                if sender:
                     intencao = detectar_intencao(mensagem)
                     print(f'🔍 Intenção: {intencao}', flush=True)
                     
@@ -126,12 +129,11 @@ async def whatsapp_webhook(request: Request):
                     if ULTRAMSG_INSTANCE and ULTRAMSG_TOKEN:
                         enviar_resposta(sender, resposta)
         else:
-            # É form-data (teste manual)
+            # Form-data (teste manual)
             from urllib.parse import parse_qs
             form_data = parse_qs(text)
             sender = form_data.get('phone', [''])[0]
             mensagem = form_data.get('body', [''])[0]
-            
             print(f'📱 Teste: "{mensagem}" de {sender}', flush=True)
         
         return PlainTextResponse('OK')
