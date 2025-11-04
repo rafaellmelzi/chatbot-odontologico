@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from twilio.rest import Client
 from dotenv import load_dotenv
+import traceback
 
 load_dotenv()
 
@@ -21,7 +22,13 @@ TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')
 
-client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+print(f'TWILIO_WHATSAPP_NUMBER: {TWILIO_WHATSAPP_NUMBER}')
+
+try:
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+except Exception as e:
+    print(f'Erro ao conectar Twilio: {e}')
+    client = None
 
 @app.get('/')
 async def root():
@@ -35,16 +42,29 @@ async def health():
 async def whatsapp_webhook(request: Request):
     try:
         form_data = await request.form()
-        incoming_msg = form_data.get('Body', '').lower()
+        incoming_msg = form_data.get('Body', '').lower().strip()
         sender = form_data.get('From', '')
         
-        response_text = 'Olá! Bem-vindo ao Chatbot Odontológico!'
+        print(f'DEBUG: Mensagem: "{incoming_msg}" | De: {sender}')
         
-        msg = client.messages.create(
-            from_=TWILIO_WHATSAPP_NUMBER,
-            body=response_text,
-            to=sender
-        )
+        if not sender or not incoming_msg:
+            print('DEBUG: Campos vazio')
+            return PlainTextResponse('OK')
+        
+        response_text = 'Ola! Bem-vindo ao Chatbot Odontologico!'
+        
+        if client:
+            msg = client.messages.create(
+                from_=TWILIO_WHATSAPP_NUMBER,
+                body=response_text,
+                to=sender
+            )
+            print(f'DEBUG: Mensagem enviada: {msg.sid}')
+        else:
+            print('DEBUG: Cliente Twilio nao disponivel')
+        
         return PlainTextResponse('OK')
     except Exception as e:
-        return PlainTextResponse('ERROR', status_code=400)
+        print(f'ERROR: {str(e)}')
+        traceback.print_exc()
+        return PlainTextResponse('OK')
