@@ -19,7 +19,6 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 NUMEROS_PERMITIDOS = ['5516991190909']
 
 def gerar_resposta_gemini(mensagem):
-    """Usa Gemini para gerar resposta inteligente"""
     try:
         print('🤖 Gemini processando...', flush=True)
         
@@ -27,17 +26,19 @@ def gerar_resposta_gemini(mensagem):
         
         headers = {"Content-Type": "application/json"}
         
-        payload = {
-            "contents": [{
-                "parts": [{
-                    "text": f\"\"\"Você é um assistente de clínica odontológica em Barreiro, BH.
+        contexto = f"""Você é um assistente de clínica odontológica em Barreiro, BH.
 Telefone: (31) 99119-0909
 Horário: Seg-Sex 08:00-18:00, Sab até 13:00
 Especialidades: Implantes, Clareamento, Canal, Limpeza, Gengivite
 
 Pergunta: {mensagem}
 
-Responda em até 3 linhas, de forma profissional e amigável.\"\"\"
+Responda em até 3 linhas, de forma profissional e amigável."""
+        
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": contexto
                 }]
             }]
         }
@@ -62,7 +63,6 @@ Responda em até 3 linhas, de forma profissional e amigável.\"\"\"
         return '📞 Erro ao processar. Ligue: (31) 99119-0909'
 
 def enviar_resposta(sender_number, resposta):
-    """Envia resposta via Ultramsg"""
     try:
         numero = sender_number.replace('@c.us', '').replace('@g.us', '')
         sender_formatted = f'whatsapp:{numero}'
