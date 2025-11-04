@@ -1,36 +1,7 @@
-﻿# Python
-__pycache__/
-*.py[cod]
-*.class
-*.so
-.Python
-env/
-venv/
-*.egg-info/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Ambiente
+﻿__pycache__/
+*.pyc
 .env
-.env.local
-
-# Logs
 *.log
-deploy_log_*.txt
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Node (se usar frontend)
-node_modules/
-dist/
-build/
-
-# Banco de dados
-*.db
-*.sqlite
+render.yaml
+app/routers/debug.py
+app/core/config.py
