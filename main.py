@@ -27,19 +27,16 @@ async def whatsapp_webhook(request: Request):
         token = os.getenv('TWILIO_AUTH_TOKEN')
         whatsapp_from = os.getenv('TWILIO_WHATSAPP_NUMBER')
         
-        print(f'WEBHOOK: Received from {sender}', flush=True)
-        
         if sid and token and whatsapp_from:
-            try:
-                client = Client(sid, token)
-                msg = client.messages.create(from_=whatsapp_from, body='Ola! Funciona!', to=sender)
-                print(f'SUCCESS: Message sent {msg.sid}', flush=True)
-            except Exception as e:
-                print(f'SEND ERROR: {str(e)}', flush=True)
-        else:
-            print('MISSING CREDENTIALS', flush=True)
+            client = Client(sid, token)
+            msg = client.messages.create(
+                from_=whatsapp_from,
+                body='Ola! Bem-vindo ao Chatbot Odontologico!',
+                to=sender
+            )
+            print(f'Message sent to {sender}', flush=True)
         
         return PlainTextResponse('OK')
     except Exception as e:
-        print(f'ERROR: {str(e)}', flush=True)
+        print(f'Error: {str(e)}', flush=True)
         return PlainTextResponse('OK')
