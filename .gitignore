@@ -1,7 +1,35 @@
-﻿__pycache__/
-*.pyc
+﻿# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets
 .env
+.env.local
+.env*.local
+secrets/
+api_keys/
+
+# Logs
 *.log
+*.txt
+
+# Render/Build
 render.yaml
+deploy_log_*.txt
+
+# App folders com senhas
+app/core/
 app/routers/debug.py
-app/core/config.py
