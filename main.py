@@ -4,4 +4,12 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "ok"}
+    return {"status": "online", "message": "Chatbot Odontologico API"}
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_webhook():
+    return {"received": True}
